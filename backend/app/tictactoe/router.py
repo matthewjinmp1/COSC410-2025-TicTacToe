@@ -23,7 +23,7 @@ def _to_dto(game_id: str, gs: GameState) -> GameStateDTO:
 @router.post("/new", response_model=GameStateDTO)
 def create_game(payload: GameCreate) -> GameStateDTO:
     gs = new_game()
-    gs.current_player = 'X'
+    gs.current_player = payload.starting_player
     gid = str(uuid4())
     GAMES[gid] = [gs]
     return _to_dto(gid, gs)

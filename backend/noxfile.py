@@ -15,3 +15,20 @@ def typecheck(session):
 def tests(session):
     session.install(".[dev]")
     session.run("pytest")
+
+@nox.session
+def lint(session):
+    session.install("ruff>=0.6")
+    session.run("ruff", "check", ".")
+
+@nox.session
+def typecheck(session):
+    session.install("mypy")
+    session.run("mypy", "src", "tests")
+
+@nox.session(python="3.12", venv_backend="uv")
+def tests(session):
+    session.install("pytest")
+    session.install("-e", ".")
+    session.run("pytest", "-q")
+
