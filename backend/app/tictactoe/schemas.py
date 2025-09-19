@@ -17,3 +17,4 @@ class GameStateDTO(BaseModel):
 
 class MoveRequest(BaseModel):
     index: int
+    player: str

@@ -23,10 +23,7 @@ def _to_dto(game_id: str, gs: GameState) -> GameStateDTO:
 @router.post("/new", response_model=GameStateDTO)
 def create_game(payload: GameCreate) -> GameStateDTO:
     gs = new_game()
-    if payload.starting_player in ("X", "O"):
-        gs.current_player = payload.starting_player  # type: ignore[assignment]
-    else:
-        gs.current_player = 'X'
+    gs.current_player = 'X'
     gid = str(uuid4())
     GAMES[gid] = [gs]
     return _to_dto(gid, gs)
@@ -45,13 +42,13 @@ def get_state(game_id: str) -> GameStateDTO:
         raise HTTPException(status_code=404, detail="Game not found.")
     return [_to_dto(game_id, g) for g in gs]
 
-
 @router.post("/{game_id}/move", response_model=GameStateDTO)
 def make_move(game_id: str, payload: MoveRequest) -> GameStateDTO:
     gs = GAMES.get(game_id)[-1]
     if not gs:
         raise HTTPException(status_code=404, detail="Game not found.")
     try:
+        gs.current_player = payload.player
         new_state = move(gs, payload.index)
     except (IndexError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))

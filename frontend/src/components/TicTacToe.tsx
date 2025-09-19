@@ -1,158 +1,181 @@
-import React from "react";
+import React from "react"
+import "./game.css"
 
-type Player = "X" | "O";
-type Cell = Player | null;
-
-type Props = {
-  onWin?: (winner: Player | "draw" | null) => void;
-};
-
-// ----- Backend DTOs -----
-type GameStateDTO = {
+type Player = 'X' | 'O';
+interface Game {
   id: string;
-  board: Cell[];
-  current_player: Player;
+  board: (Player | null)[];
   winner: Player | null;
   is_draw: boolean;
   status: string;
-};
+}
 
-// Prefer env, fallback to localhost:8000
-const API_BASE =
-  (import.meta as any)?.env?.VITE_API_URL?.replace(/\/$/, "") ??
-  "http://localhost:8000";
+export default function TicTacToe() {
+  var [mini_boards, set_mini_boards] = React.useState<Game[] | null>(null); 
+  var [mega_board, set_mega_board] = React.useState<Game | null>(null); 
+  var [player, set_player] = React.useState<Player>('X');
+  var [active_board, set_active_board] = React.useState<number | null>(null);
 
+  var api_base = "http://localhost:8000"; 
 
+  async function createGame() { 
+    var response = await fetch(api_base + "/tictactoe/new", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ starting_player: "X" })
+    })
+    return response.json()
+  }
 
-export default function TicTacToe({ onWin }: Props) {
-  const [state, setState] = React.useState<GameStateDTO | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  async function playMove(board_id: string, move_index: number) {
+    var r = await fetch(api_base + "/tictactoe/" + board_id + "/move", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ index: move_index, player: player})
+    })
 
-  // Create a new game on mount
-  React.useEffect(() => {
-    let canceled = false;
-    async function start() {
-      setError(null);
-      setLoading(true);
-      try {
-        const gs = await createGame();
-        if (!canceled) setState(gs);
-      } catch (e: any) {
-        if (!canceled) setError(e?.message ?? "Failed to start game");
-      } finally {
-        if (!canceled) setLoading(false);
+    return r.json()
+  }
+
+  React.useEffect(function() {
+
+    async function load_mini_boards() {
+      let games: Game[] = [];
+      for (let i = 0; i < 9; i++) {
+        let game = await createGame();
+        games.push(game);
+      }
+      set_mini_boards(games);
+    }
+    load_mini_boards();
+
+    async function load_mega_baord() {
+      let game = await createGame();
+      set_mega_board(game);
+    }
+    load_mega_baord();
+    
+  }, [])
+
+  if (!mini_boards || !mega_board) return <div>Loading...</div>
+
+  async function handleClick(board: number, move_index: number) {
+    if (!mega_board || !mini_boards) return;
+    if (!mini_boards[board] || mini_boards[board].winner || mini_boards[board].is_draw || mini_boards[board].board[move_index]) return;
+
+    const updated_mini_board = await playMove(mini_boards[board].id, move_index); 
+    const new_state = [...mini_boards];     
+    new_state[board] = updated_mini_board;
+    set_mini_boards(new_state); 
+
+    let updated_mega_board = mega_board;
+    if (updated_mini_board.winner) { 
+      updated_mega_board = await playMove(mega_board.id, board); 
+      set_mega_board(updated_mega_board);
+    }
+
+    if (new_state[move_index].winner || updated_mega_board.winner) {
+      set_active_board(null);   
+    } else {
+      set_active_board(move_index);             
+    }
+
+    if (player === 'X') {
+      set_player('O');
+    } else {
+      set_player('X');
+    }
+  }
+
+  function reset() {
+
+    async function load_mini_boards() {
+      let games: Game[] = [];
+      for (let i = 0; i < 9; i++) {
+        let game = await createGame();
+        games.push(game);
+      }
+      set_mini_boards(games);
+    }
+    load_mini_boards();
+
+    async function load_mega_baord() {
+      let game = await createGame();
+      set_mega_board(game);
+    }
+    load_mega_baord();
+
+    set_player('X');
+    set_active_board(null);
+  }
+
+  function makeHandler(board: number, index: number) {
+    return function() { 
+      if (active_board === null || active_board == board) {
+        handleClick(board, index) 
       }
     }
-    start();
-    return () => {
-      canceled = true;
-    };
-  }, []);
-
-  // Notify parent when result changes
-  React.useEffect(() => {
-    if (!state || !onWin) return;
-    if (state.winner) onWin(state.winner);
-    else if (state.is_draw) onWin("draw");
-  }, [state?.winner, state?.is_draw]);
-
-  async function createGame(): Promise<GameStateDTO> {
-    const r = await fetch(`${API_BASE}/tictactoe/new`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ starting_player: "X" }),
-    });
-    if (!r.ok) throw new Error(`Create failed: ${r.status}`);
-    return r.json();
   }
 
-  async function playMove(index: number): Promise<GameStateDTO> {
-    if (!state) throw new Error("No game");
-    const r = await fetch(`${API_BASE}/tictactoe/${state.id}/move`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ index }),
-    });
-    if (!r.ok) {
-      const detail = await r.json().catch(() => ({}));
-      throw new Error(detail?.detail ?? `Move failed: ${r.status}`);
-    }
-    return r.json();
-  }
+  type MiniBoardProps = { board: number };
+  function MiniBoard({ board }: MiniBoardProps) {
+    if (!mini_boards || !mega_board) return;
 
-  async function handleClick(i: number) {
-    if (!state || loading) return;
-    // Light client-side guard to avoid noisy 400s:
-    if (state.winner || state.is_draw || state.board[i] !== null) return;
-
-    setLoading(true);
-    setError(null);
-    try {
-      const next = await playMove(i);
-      setState(next);
-    } catch (e: any) {
-      setError(e?.message ?? "Move failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function reset() {
-    setLoading(true);
-    setError(null);
-    try {
-      const gs = await createGame();
-      setState(gs);
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to reset");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-sm mx-auto p-4">
-        <div className="mb-2 text-red-600 font-semibold">Error: {error}</div>
-        <button className="rounded-2xl px-4 py-2 border" onClick={reset}>
-          Retry
+    var cells = [];
+    for (var i = 0; i < 9; i++) {
+      cells.push(
+        <button
+          key={`${board}-${i}`}
+          onClick={makeHandler(board, i)}
+          className="square" 
+          disabled={!!mega_board.winner || !!mini_boards[board].winner}
+        >
+          {mini_boards[board].board[i]}
         </button>
-      </div>
-    );
-  }
+      )
+    }
 
-  if (!state) {
     return (
-      <div className="max-w-sm mx-auto p-4">
-        <div className="text-center">Loading…</div>
+      <div className={`mini_board ${active_board === board ? 'red_outline' : ''}`}>
+        {cells}
+        {mini_boards[board].winner && (
+        <div className="winner_overlay">
+          {mini_boards[board].winner}
+        </div>
+      )}
       </div>
-    );
+    )
   }
 
-  const { board, status } = state;
+  function Status() {
+    if (!mini_boards || !mega_board) return;
+
+    if (mega_board.winner) {
+      return <div className="center">{mega_board.status}</div>
+    }
+    
+    return <div className="center">Current Player: {player}</div>
+  }
 
   return (
-    <div className="max-w-sm mx-auto p-4">
-      <div className="text-center mb-2 text-xl font-semibold">{status}</div>
-      <div className="grid grid-cols-3 gap-2">
-        {board.map((c, i) => (
-          <button
-            key={i}
-            className="aspect-square rounded-2xl border text-3xl font-bold flex items-center justify-center disabled:opacity-50"
-            onClick={() => handleClick(i)}
-            aria-label={`cell-${i}`}
-            disabled={loading || c !== null || state.winner !== null || state.is_draw}
-          >
-            {c}
-          </button>
-        ))}
+    <div>
+      <Status/>
+
+      <div className="center">
+        <div className="mega_board">
+
+          {
+            Array.from({length: 9}).map((element, index) => (
+              <MiniBoard key={index} board={index} />
+            ))
+          }
+
       </div>
-      <div className="text-center mt-3">
-        <button className="rounded-2xl px-4 py-2 border" onClick={reset} disabled={loading}>
-          New Game
-        </button>
+
+      </div>
+      <div className="center">
+        <button onClick={reset}>New Game</button>
       </div>
     </div>
-  );
+  )
 }
