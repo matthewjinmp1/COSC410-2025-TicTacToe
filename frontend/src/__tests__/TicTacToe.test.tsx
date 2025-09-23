@@ -1,69 +1,109 @@
-import { describe, expect, it, vi } from "vitest";
-import React from "react";
+import { describe, expect, test } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import TicTacToe from "../components/TicTacToe";
+import App from "../App";
 
-describe("TicTacToe component (API via MSW)", () => {
-  it("plays a simple game and declares winner", async () => {
-    const onWin = vi.fn();
-    render(<TicTacToe onWin={onWin} />);
+describe("mega board", () => {
+  test("some moves", async () => {
+    render(<App />);
 
-    // Wait for game creation (MSW handles POST /tictactoe/new)
-    await screen.findByLabelText("cell-0");
+    await screen.findByText("Current Player: X");
 
-    // X 0, O 3, X 1, O 4, X 2 -> X wins (MSW script enforces this)
-    fireEvent.click(screen.getByLabelText("cell-0"));
-    await screen.findByText(/O's turn/i);   // wait until move resolved
-    expect(screen.getByLabelText("cell-0")).toHaveTextContent("X");
-    fireEvent.click(screen.getByLabelText("cell-3"));
-    await screen.findByText(/X's turn/i);   // wait until move resolved
-    expect(screen.getByLabelText("cell-3")).toHaveTextContent("O");
-    fireEvent.click(screen.getByLabelText("cell-1"));
-    await screen.findByText(/O's turn/i);   // wait until move resolved
-    expect(screen.getByLabelText("cell-1")).toHaveTextContent("X");
-    fireEvent.click(screen.getByLabelText("cell-4"));
-    await screen.findByText(/X's turn/i);   // wait until move resolved
-    expect(screen.getByLabelText("cell-4")).toHaveTextContent("O");
-    fireEvent.click(screen.getByLabelText("cell-2"));
-    await screen.findByText(/X's turn/i);   // wait until move resolved
-    expect(screen.getByLabelText("cell-2")).toHaveTextContent("X");
+    fireEvent.click(screen.getByLabelText("0-0"));
+    await screen.findByText("Current Player: O"); 
+    expect(screen.getByLabelText("0-0").textContent).toBe("X"); 
 
-    expect(await screen.findByText(/X wins/i)).toBeInTheDocument();
-    expect(onWin).toHaveBeenCalledWith("X");
+    fireEvent.click(screen.getByLabelText("0-1"));
+    await screen.findByText("Current Player: X"); 
+    expect(screen.getByLabelText("0-1").textContent).toBe("O"); 
+
+    fireEvent.click(screen.getByLabelText("0-2"));
+    expect(screen.getByLabelText("0-2").textContent).toBe(""); 
+
+    fireEvent.click(screen.getByLabelText("1-0"));
+    await screen.findByText("Current Player: O"); 
+    expect(screen.getByLabelText("1-0").textContent).toBe("X");
+
+    fireEvent.click(screen.getByLabelText("0-4"));
+    await screen.findByText("Current Player: X"); 
+    expect(screen.getByLabelText("0-4").textContent).toBe("O");
+
+    fireEvent.click(screen.getByLabelText("4-0"));
+    await screen.findByText("Current Player: O"); 
+    expect(screen.getByLabelText("4-0").textContent).toBe("X");
+
+    fireEvent.click(screen.getByLabelText("0-8"));
+    await screen.findByText("Current Player: X"); 
+    expect(screen.getByLabelText("0-8").textContent).toBe("O");
+
+    fireEvent.click(screen.getByLabelText("8-0"));
+    await screen.findByText("Current Player: O"); 
+    expect(screen.getByLabelText("8-0").textContent).toBe("X");
+
   });
 
-  it("prevents moves in occupied cells", async () => {
-    render(<TicTacToe />);
-    const c0 = await screen.findByLabelText("cell-0");
-    fireEvent.click(c0);
-    await screen.findByText(/O's turn/i);   // wait until move resolved
-    fireEvent.click(c0); // second click ignored/disabled
-    await screen.findByText(/O's turn/i);   // wait until move resolved
-    expect(c0.textContent).toBe("X");
+  test("prevents moves in occupied cells", async () => {
+    render(<App />);
+    
+    await screen.findByText("Current Player: X");
+    
+    fireEvent.click(screen.getByLabelText("0-0"));
+    await screen.findByText("Current Player: O");
+    expect(screen.getByLabelText("0-0").textContent).toBe("X");
+    
+    fireEvent.click(screen.getByLabelText("0-0"));
+    await screen.findByText("Current Player: O"); 
+    expect(screen.getByLabelText("0-0").textContent).toBe("X");
   });
 
-  it("can start a new game after finishing", async () => {
-    render(<TicTacToe />);
-    await screen.findByLabelText("cell-0");
-    // play the same winning sequence
-    fireEvent.click(screen.getByLabelText("cell-0"));
-    await screen.findByText(/O's turn/i);   // wait until move resolved
-    fireEvent.click(screen.getByLabelText("cell-3"));
-    await screen.findByText(/X's turn/i);   // wait until move resolved
-    fireEvent.click(screen.getByLabelText("cell-1"));
-    await screen.findByText(/O's turn/i);   // wait until move resolved
-    fireEvent.click(screen.getByLabelText("cell-4"));
-    await screen.findByText(/X's turn/i);   // wait until move resolved
-    fireEvent.click(screen.getByLabelText("cell-2"));
-
-    expect(await screen.findByText(/X wins/i)).toBeInTheDocument();
-
-    // Click "New Game" (component calls POST /tictactoe/new again)
-    const newGameBtn = screen.getByRole("button", { name: /new game/i });
-    fireEvent.click(newGameBtn);
-
-    // board should be reset: cell-0 is empty again
-    const c0 = await screen.findByLabelText("cell-0");
-    expect(c0.textContent).toBe("");
+  test("alternates players correctly", async () => {
+    render(<App />);
+    
+    await screen.findByText("Current Player: X");
+    
+    fireEvent.click(screen.getByLabelText("0-0"));
+    await screen.findByText("Current Player: O");
+    
+    fireEvent.click(screen.getByLabelText("0-1"));
+    await screen.findByText("Current Player: X");
+    
+    fireEvent.click(screen.getByLabelText("1-0"));
+    await screen.findByText("Current Player: O");
   });
+
+  test("restricts moves to active board", async () => {
+    render(<App />);
+    
+    await screen.findByText("Current Player: X");
+    
+    fireEvent.click(screen.getByLabelText("0-2"));
+    await screen.findByText("Current Player: O");
+    
+    const wrongBoardCell = screen.getByLabelText("1-0");
+    fireEvent.click(wrongBoardCell);
+    
+    await screen.findByText("Current Player: O");
+    expect(wrongBoardCell.textContent).toBe("");
+  });
+
+  test("displays winner overlay when mini board is won", async () => {
+    render(<App />);
+    
+    await screen.findByText("Current Player: X");
+    
+    fireEvent.click(screen.getByLabelText("0-0"));
+    await screen.findByText("Current Player: O");
+    
+    fireEvent.click(screen.getByLabelText("0-3"));
+    await screen.findByText("Current Player: X");
+    
+    fireEvent.click(screen.getByLabelText("3-1"));
+    await screen.findByText("Current Player: O");
+    
+    fireEvent.click(screen.getByLabelText("1-4"));
+    await screen.findByText("Current Player: X");
+    
+    fireEvent.click(screen.getByLabelText("4-2"));
+    
+  });
+
 });

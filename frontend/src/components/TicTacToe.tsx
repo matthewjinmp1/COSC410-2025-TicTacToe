@@ -2,6 +2,7 @@ import React from "react"
 import "./game.css"
 
 type Player = 'X' | 'O';
+type Board = number | null;
 interface Game {
   id: string;
   board: (Player | null)[];
@@ -10,22 +11,31 @@ interface Game {
   status: string;
 }
 
-export default function TicTacToe() {
-  var [mini_boards, set_mini_boards] = React.useState<Game[] | null>(null); 
-  var [mega_board, set_mega_board] = React.useState<Game | null>(null); 
-  var [player, set_player] = React.useState<Player>('X');
-  var [active_board, set_active_board] = React.useState<number | null>(null);
+type TicTacToeProps = {
+  player: Player;
+  active_board: Board;
+  mega_board: Game | null;
+  mini_boards: Game[] | null;
+  set_mini_boards: React.Dispatch<React.SetStateAction<Game[] | null>>;
+  set_mega_board: React.Dispatch<React.SetStateAction<Game | null>>;
+  set_active_board: React.Dispatch<React.SetStateAction<number | null>>;
+  set_player: React.Dispatch<React.SetStateAction<Player>>;
+  board: Board;
+};
 
-  var api_base = "http://localhost:8000"; 
+export default function TicTacToe({
+  player,
+  active_board,
+  mega_board,
+  mini_boards,
+  set_mini_boards,
+  set_mega_board,
+  set_active_board,
+  set_player,
+  board
+}: TicTacToeProps) {
 
-  async function createGame() { 
-    var response = await fetch(api_base + "/tictactoe/new", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ starting_player: "X" })
-    })
-    return response.json()
-  }
+  const api_base = "http://localhost:8000"; 
 
   async function playMove(board_id: string, move_index: number) {
     var r = await fetch(api_base + "/tictactoe/" + board_id + "/move", {
@@ -37,33 +47,12 @@ export default function TicTacToe() {
     return r.json()
   }
 
-  React.useEffect(function() {
-
-    async function load_mini_boards() {
-      let games: Game[] = [];
-      for (let i = 0; i < 9; i++) {
-        let game = await createGame();
-        games.push(game);
-      }
-      set_mini_boards(games);
-    }
-    load_mini_boards();
-
-    async function load_mega_baord() {
-      let game = await createGame();
-      set_mega_board(game);
-    }
-    load_mega_baord();
-    
-  }, [])
-
-  if (!mini_boards || !mega_board) return <div>Loading...</div>
-
-  async function handleClick(board: number, move_index: number) {
-    if (!mega_board || !mini_boards) return;
+  async function handleClick(board: Board, move_index: number) {
+    if (mini_boards == null || mega_board == null || board == null) return;
     if (!mini_boards[board] || mini_boards[board].winner || mini_boards[board].is_draw || mini_boards[board].board[move_index]) return;
 
     const updated_mini_board = await playMove(mini_boards[board].id, move_index); 
+
     const new_state = [...mini_boards];     
     new_state[board] = updated_mini_board;
     set_mini_boards(new_state); 
@@ -87,29 +76,7 @@ export default function TicTacToe() {
     }
   }
 
-  function reset() {
-
-    async function load_mini_boards() {
-      let games: Game[] = [];
-      for (let i = 0; i < 9; i++) {
-        let game = await createGame();
-        games.push(game);
-      }
-      set_mini_boards(games);
-    }
-    load_mini_boards();
-
-    async function load_mega_baord() {
-      let game = await createGame();
-      set_mega_board(game);
-    }
-    load_mega_baord();
-
-    set_player('X');
-    set_active_board(null);
-  }
-
-  function makeHandler(board: number, index: number) {
+  function makeHandler(board: Board, index: number) {
     return function() { 
       if (active_board === null || active_board == board) {
         handleClick(board, index) 
@@ -117,65 +84,43 @@ export default function TicTacToe() {
     }
   }
 
-  type MiniBoardProps = { board: number };
-  function MiniBoard({ board }: MiniBoardProps) {
-    if (!mini_boards || !mega_board) return;
+  if (
+    mini_boards == null ||
+    mega_board == null ||
+    board == null ||              
+    mini_boards[board] == null        
+  ) {
+    return;                
+  }
 
-    var cells = [];
-    for (var i = 0; i < 9; i++) {
-      cells.push(
-        <button
-          key={`${board}-${i}`}
-          onClick={makeHandler(board, i)}
-          className="square" 
-          disabled={!!mega_board.winner || !!mini_boards[board].winner}
-        >
-          {mini_boards[board].board[i]}
-        </button>
-      )
-    }
+  var cells = [];
+  for (var i = 0; i < 9; i++) {
+    cells.push(
+      <button
+        key={`${board}-${i}`}
+        onClick={makeHandler(board, i)}
+        className="square" 
+        disabled={!!mega_board.winner || !!mini_boards[board].winner}
+        aria-label={`${board}-${i}`}
+      >
+        {mini_boards[board].board[i]}
+      </button>
+    )
+  }
 
+  if (mini_boards[board].winner) {
     return (
-      <div className={`mini_board ${active_board === board ? 'red_outline' : ''}`}>
-        {cells}
-        {mini_boards[board].winner && (
+      <div className="mini_board">
         <div className="winner_overlay">
           {mini_boards[board].winner}
         </div>
-      )}
       </div>
     )
   }
 
-  function Status() {
-    if (!mini_boards || !mega_board) return;
-
-    if (mega_board.winner) {
-      return <div className="center">{mega_board.status}</div>
-    }
-    
-    return <div className="center">Current Player: {player}</div>
-  }
-
   return (
-    <div>
-      <Status/>
-
-      <div className="center">
-        <div className="mega_board">
-
-          {
-            Array.from({length: 9}).map((element, index) => (
-              <MiniBoard key={index} board={index} />
-            ))
-          }
-
-      </div>
-
-      </div>
-      <div className="center">
-        <button onClick={reset}>New Game</button>
-      </div>
+    <div className={`mini_board ${active_board === board ? 'red_outline' : ''}`}>
+      {cells}
     </div>
   )
 }

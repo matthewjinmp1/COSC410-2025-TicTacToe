@@ -45,6 +45,7 @@ docker compose up --build  # visit http://localhost:5173 and http://localhost:80
 # Backend: lint, typecheck, unit/integration tests
 cd backend
 uv run nox -s lint typecheck tests
+uv run nox -s tests
 
 # Frontend: unit tests
 cd ../frontend

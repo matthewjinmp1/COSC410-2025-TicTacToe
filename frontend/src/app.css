@@ -1,0 +1,11 @@
+
+.mega_board {
+    display: grid;
+    grid-template-columns: repeat(3, 152px);
+    grid-template-rows: repeat(3, 152px);
+}
+
+.center {
+    display: flex;
+    justify-content: center;
+}
