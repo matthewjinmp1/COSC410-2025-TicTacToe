@@ -1,8 +1,9 @@
+import React from "react";
 import TicTacToe from "@/components/TicTacToe";
-import React from "react"
-import "./app.css"
+import "./app.css";
 
-type Player = 'X' | 'O';
+type Player = "X" | "O";
+
 interface Game {
   id: string;
   board: (Player | null)[];
@@ -11,120 +12,122 @@ interface Game {
   status: string;
 }
 
+const API_BASE = "http://localhost:8000";
+
+async function createGame(starting_player: Player = "X"): Promise<Game> {
+  const r = await fetch(`${API_BASE}/tictactoe/new`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ starting_player }),
+  });
+  if (!r.ok) throw new Error("Failed to create game");
+  return r.json();
+}
+
+async function playMove(gameId: string, index: number, player: Player): Promise<Game> {
+  const r = await fetch(`${API_BASE}/tictactoe/${gameId}/move`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ index, player }),
+  });
+  if (!r.ok) throw new Error("Failed to play move");
+  return r.json();
+}
+
 export default function App() {
-  var [mini_boards, set_mini_boards] = React.useState<Game[] | null>(null); 
-  var [mega_board, set_mega_board] = React.useState<Game | null>(null); 
-  var [player, set_player] = React.useState<Player>('X');
-  var [active_board, set_active_board] = React.useState<number | null>(null);
+  const [miniBoards, setMiniBoards] = React.useState<Game[] | null>(null);
+  const [megaBoard, setMegaBoard] = React.useState<Game | null>(null);
+  const [player, setPlayer] = React.useState<Player>("X");
+  const [activeBoard, setActiveBoard] = React.useState<number | null>(null); // which mini-board is playable
 
-  const api_base = "http://localhost:8000"; 
+  React.useEffect(() => {
+    init();
+  }, []);
 
-  async function createGame() { 
-    var response = await fetch(api_base + "/tictactoe/new", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ starting_player: "X" })
-    })
-    return response.json()
+  async function init() {
+    // Create 9 mini boards + 1 mega board concurrently
+    const minisPromise = Promise.all(Array.from({ length: 9 }, () => createGame("X")));
+    const megaPromise = createGame("X");
+    const [minis, mega] = await Promise.all([minisPromise, megaPromise]);
+
+    setMiniBoards(minis);
+    setMegaBoard(mega);
+    setPlayer("X");
+    setActiveBoard(null); // free choice on the first move
   }
 
-  React.useEffect(function() {
-    async function load_mini_boards() {
-      let games: Game[] = [];
-      for (let i = 0; i < 9; i++) {
-        let game = await createGame();
-        games.push(game);
-      }
-      set_mini_boards(games);
-    }
-    load_mini_boards();
+  async function handleMiniMove(miniIndex: number, cellIndex: number) {
+    if (!miniBoards || !megaBoard) return;
+    if (activeBoard !== null && activeBoard !== miniIndex) return; // not your board
 
-    async function load_mega_baord() {
-      let game = await createGame();
-      set_mega_board(game);
+    const mini = miniBoards[miniIndex];
+    if (mini.winner || mini.is_draw || mini.board[cellIndex]) return; // already resolved or occupied
+
+    // 1) Play move on the selected mini-board
+    const updatedMini = await playMove(mini.id, cellIndex, player);
+    const newMinis = miniBoards.slice();
+    newMinis[miniIndex] = updatedMini;
+    setMiniBoards(newMinis);
+
+    // 2) If that mini-board was just won, mark the mega-board at the same index
+    let updatedMega = megaBoard;
+    if (updatedMini.winner) {
+      updatedMega = await playMove(megaBoard.id, miniIndex, player);
+      setMegaBoard(updatedMega);
     }
-    load_mega_baord();
-    
-  }, [])
+
+    // 3) Choose next active mini-board (based on cellIndex you just played)
+    const destination = newMinis[cellIndex];
+    const destinationLocked = !destination || destination.winner !== null || destination.is_draw === true;
+
+    setActiveBoard(updatedMega.winner || destinationLocked ? null : cellIndex);
+
+    // 4) Toggle player
+    setPlayer((p) => (p === "X" ? "O" : "X"));
+  }
 
   function reset() {
-    async function load_mini_boards() {
-      let games: Game[] = [];
-      for (let i = 0; i < 9; i++) {
-        let game = await createGame();
-        games.push(game);
-      }
-      set_mini_boards(games);
-    }
-    load_mini_boards();
-
-    async function load_mega_baord() {
-      let game = await createGame();
-      set_mega_board(game);
-    }
-    load_mega_baord();
-
-    set_player('X');
-    set_active_board(null);
+    init();
   }
 
-  if (
-    mini_boards === null || 
-    mega_board === null
-  ) {
-    return <div>Loading...</div>; 
-  } 
+  if (!miniBoards || !megaBoard) {
+    return <div>Loading...</div>;
+  }
 
   function Status() {
-    if (!mini_boards || !mega_board) return null;
-
-    if (mega_board.winner) {
-      return <div className="center">{mega_board.status}</div>
+    if (!megaBoard) return;
+    if (megaBoard.winner) {
+      return <div className="center">{megaBoard.status}</div>;
     }
-
-    let finished_boards = 0;
-    for (let i = 0; i < 9; i++) {
-      if (mini_boards[i].winner || mini_boards[i].is_draw) {
-        finished_boards += 1;
-      }
-    }
-
-    if (finished_boards === 9) {
-      return <div className="center">Draw</div>
-    }
-    
-    return <div className="center">Current Player: {player}</div>
+    return <div className="center">Current Player: {player}</div>;
   }
 
   return (
     <div data-testid="app">
-      <Status/>
+      <Status />
 
       <div className="center">
         <div className="mega_board">
+          {miniBoards.map((game, index) => {
+            const disabled = !!megaBoard.winner || (activeBoard !== null && activeBoard !== index); // parent-level lock
 
-          {
-            Array.from({length: 9}).map((element, index) => (
-              <TicTacToe key={index} 
-                player={player}
-                active_board={active_board}
-                mega_board={mega_board}
-                mini_boards={mini_boards}
-                set_mini_boards={set_mini_boards}
-                set_mega_board={set_mega_board}
-                set_active_board={set_active_board}
-                set_player={set_player}
-                board={index} 
+            return (
+              <TicTacToe
+                key={index}
+                game={game}
+                miniIndex={index}
+                disabled={disabled}
+                highlight={activeBoard === index}
+                onCellClick={(cellIdx) => handleMiniMove(index, cellIdx)}
               />
-            ))
-          }
-
+            );
+          })}
+        </div>
       </div>
 
-      </div>
       <div className="center">
         <button onClick={reset}>New Game</button>
       </div>
     </div>
-  )
+  );
 }
