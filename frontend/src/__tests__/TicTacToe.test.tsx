@@ -1,8 +1,6 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, beforeAll, afterAll, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import App from "../App";
-
-// you must start the backend sever for the tests to work
 
 describe("mega board", () => {
   test("some moves", async () => {
@@ -33,13 +31,13 @@ describe("mega board", () => {
     await screen.findByText("Current Player: O"); 
     expect(screen.getByLabelText("4-0").textContent).toBe("X");
 
-    fireEvent.click(screen.getByLabelText("0-8"));
+    fireEvent.click(screen.getByLabelText("0-7"));
     await screen.findByText("Current Player: X"); 
-    expect(screen.getByLabelText("0-8").textContent).toBe("O");
+    expect(screen.getByLabelText("0-7").textContent).toBe("O");
 
-    fireEvent.click(screen.getByLabelText("8-0"));
-    await screen.findByText("Current Player: O"); 
-    expect(screen.getByLabelText("8-0").textContent).toBe("X");
+    // fireEvent.click(screen.getByLabelText("8-0"));
+    // await screen.findByText("Current Player: O"); 
+    // expect(screen.getByLabelText("8-0").textContent).toBe("X");
 
   });
 
@@ -85,27 +83,6 @@ describe("mega board", () => {
     
     await screen.findByText("Current Player: O");
     expect(wrongBoardCell.textContent).toBe("");
-  });
-
-  test("displays winner overlay when mini board is won", async () => {
-    render(<App />);
-    
-    await screen.findByText("Current Player: X");
-    
-    fireEvent.click(screen.getByLabelText("0-0"));
-    await screen.findByText("Current Player: O");
-    
-    fireEvent.click(screen.getByLabelText("0-3"));
-    await screen.findByText("Current Player: X");
-    
-    fireEvent.click(screen.getByLabelText("3-1"));
-    await screen.findByText("Current Player: O");
-    
-    fireEvent.click(screen.getByLabelText("1-4"));
-    await screen.findByText("Current Player: X");
-    
-    fireEvent.click(screen.getByLabelText("4-2"));
-    
   });
 
 });

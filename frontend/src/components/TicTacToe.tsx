@@ -48,6 +48,7 @@ export default function TicTacToe({
   }
 
   async function handleClick(board: Board, move_index: number) {
+    // console.log('here');
     if (mini_boards == null || mega_board == null || board == null) return;
     if (!mini_boards[board] || mini_boards[board].winner || mini_boards[board].is_draw || mini_boards[board].board[move_index]) return;
 

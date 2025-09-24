@@ -1,6 +1,11 @@
 import "@testing-library/jest-dom";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { beforeAll, afterAll, afterEach } from "vitest";
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 const initial = {
   id: "TEST-1",
@@ -14,37 +19,51 @@ const initial = {
 const script = [
   {
     board: ["X", null, null, null, null, null, null, null, null],
-    current_player: "O",
     winner: null,
     is_draw: false,
-    status: "O's turn",
-  }
-  ,
+  },
 
   {
     board: ["X", "O", null, null, null, null, null, null, null],
-    current_player: "X",
     winner: null,
     is_draw: false,
-    status: "X's turn",
   }, 
 
   {
     board: ["X", null, null, null, null, null, null, null, null],
-    current_player: "O",
     winner: null,
     is_draw: false,
-    status: "X's turn",
-  }
-  , 
+  }, 
 
   {
-    board: ["X", "O", null, null, "O", null, null, null, null],
-    current_player: "X",
+    board: ["X", "O", null, null, 'O', null, null, null, null],
     winner: null,
     is_draw: false,
-    status: "X's turn",
-  }
+  }, 
+
+  {
+    board: ["X", null, null, null, null, null, null, null, null],
+    winner: null,
+    is_draw: false,
+  }, 
+
+  {
+    board: ["X", "O", null, null, 'O', null, null, 'O', null],
+    winner: null,
+    is_draw: false,
+  }, 
+
+  {
+    board: ["X", null, null, null, null, null, null, null, null],
+    winner: null,
+    is_draw: false,
+  }, 
+
+  {
+    board: ["X", null, null, null, null, null, null, null, null],
+    winner: null,
+    is_draw: false,
+  },
 
 ];
 
