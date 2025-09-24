@@ -35,9 +35,12 @@ describe("mega board", () => {
     await screen.findByText("Current Player: X"); 
     expect(screen.getByLabelText("0-7").textContent).toBe("O");
 
-    // fireEvent.click(screen.getByLabelText("8-0"));
-    // await screen.findByText("Current Player: O"); 
-    // expect(screen.getByLabelText("8-0").textContent).toBe("X");
+    fireEvent.click(screen.getByLabelText("7-0"));
+    await screen.findByText("Current Player: O"); 
+    expect(screen.getByLabelText("7-0").textContent).toBe("X");
+
+    fireEvent.click(screen.getByLabelText("0-8"));
+    expect(screen.getByLabelText("0-8").textContent).toBe("");
 
   });
 
