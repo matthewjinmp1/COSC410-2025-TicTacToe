@@ -95,10 +95,22 @@ export default function App() {
   }
 
   function Status() {
-    if (!megaBoard) return;
+    if (!megaBoard || !miniBoards) return;
     if (megaBoard.winner) {
       return <div className="center">{megaBoard.status}</div>;
     }
+
+    let finished_boards = 0;
+    for (let i = 0; i < 9; i++) {
+      if (miniBoards[i].winner || miniBoards[i].is_draw) {
+        finished_boards++;
+      }
+    }
+
+    if (finished_boards === 9) {
+      return <div className="center">Draw</div>;
+    }
+
     return <div className="center">Current Player: {player}</div>;
   }
 

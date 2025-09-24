@@ -35,6 +35,14 @@ export default function TicTacToe({
     );
   }
 
+  if (game.is_draw) {
+    return (
+      <div className="mini_board">
+        <div className="draw_overlay">Draw</div>
+      </div>
+    );
+  }
+
   const cells = [];
   for (let i = 0; i < 9; i++) {
     const cellDisabled = disabled || game.is_draw || !!game.board[i];
