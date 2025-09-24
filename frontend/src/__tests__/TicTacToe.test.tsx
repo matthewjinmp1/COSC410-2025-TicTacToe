@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import App from "../App";
 
+// you must start the backend sever for the tests to work
+
 describe("mega board", () => {
   test("some moves", async () => {
     render(<App />);
