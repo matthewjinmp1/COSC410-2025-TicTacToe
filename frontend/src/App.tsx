@@ -81,6 +81,17 @@ export default function App() {
     if (mega_board.winner) {
       return <div className="center">{mega_board.status}</div>
     }
+
+    let finished_boards = 0;
+    for (let i = 0; i < 9; i++) {
+      if (mini_boards[i].winner || mini_boards[i].is_draw) {
+        finished_boards += 1;
+      }
+    }
+
+    if (finished_boards === 9) {
+      return <div className="center">Draw</div>
+    }
     
     return <div className="center">Current Player: {player}</div>
   }

@@ -32,7 +32,7 @@ export default function TicTacToe({
   set_mega_board,
   set_active_board,
   set_player,
-  board
+  board, 
 }: TicTacToeProps) {
 
   const api_base = "http://localhost:8000"; 
@@ -63,7 +63,7 @@ export default function TicTacToe({
       set_mega_board(updated_mega_board);
     }
 
-    if (new_state[move_index].winner || updated_mega_board.winner) {
+    if (new_state[move_index].winner || updated_mega_board.winner || new_state[move_index].is_draw) {
       set_active_board(null);   
     } else {
       set_active_board(move_index);             
@@ -113,6 +113,16 @@ export default function TicTacToe({
       <div className="mini_board">
         <div className="winner_overlay">
           {mini_boards[board].winner}
+        </div>
+      </div>
+    )
+  }
+
+  if (mini_boards[board].is_draw) {
+    return (
+      <div className="mini_board">
+        <div className="draw_overlay">
+          Draw
         </div>
       </div>
     )
