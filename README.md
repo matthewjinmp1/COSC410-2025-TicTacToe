@@ -1,3 +1,10 @@
+This repo is a full stack implementation of Super TicTacToe for the web. 
+
+
+
+
+
+
 # Software Engineering Capstone Starter
 
 A batteries-included starter repo for teams building a **FastAPI** backend and **React + TypeScript (Vite)** frontend.
